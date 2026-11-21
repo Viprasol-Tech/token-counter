@@ -8,7 +8,7 @@
 
 _Built and maintained by [Viprasol Tech](https://viprasol.com) — Fintech Experts. Full-Stack Builders._
 
-[![CI](https://img.shields.io/github/actions/workflow/status/Viprasol-Tech/token-counter/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Viprasol-Tech/token-counter/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/Viprasol-Tech/token-counter/ci.yml?branch=master&style=flat-square&label=CI)](https://github.com/Viprasol-Tech/token-counter/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-black?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square)](https://www.python.org/)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen?style=flat-square)](pyproject.toml)
