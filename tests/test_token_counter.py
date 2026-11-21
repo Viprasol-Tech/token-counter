@@ -2,7 +2,7 @@
 
 import pytest
 
-from token_counter import TokenCounter, CostCalculator, count_tokens, calculate_cost
+from token_counter import CostCalculator, TokenCounter, calculate_cost, count_tokens
 
 
 class TestTokenCounter:
@@ -122,9 +122,7 @@ class TestCostCalculator:
         """Test request cost estimation."""
         prompt = "Hello world"
         result = CostCalculator.estimate_request_cost(
-            prompt,
-            expected_output_tokens=100,
-            model="gpt-4-turbo"
+            prompt, expected_output_tokens=100, model="gpt-4-turbo"
         )
 
         assert "input_tokens" in result or "input_cost" in result
@@ -163,8 +161,8 @@ class TestEdgeCases:
         """Test with very long text."""
         long_text = "word " * 1000
         tokens = TokenCounter.estimate_tokens(long_text)
-        # 5000 chars * 4.5 tokens per 1000 chars = ~22 tokens
-        assert tokens > 10
+        # 5000 chars of English is roughly 1,000-1,400 tokens
+        assert 1000 <= tokens <= 1400
 
     def test_special_characters(self):
         """Test with special characters."""
@@ -177,3 +175,37 @@ class TestEdgeCases:
         text = "Hello 世界 мир"
         tokens = TokenCounter.estimate_tokens(text)
         assert tokens > 0
+
+
+class TestAccuracy:
+    """Estimates should land near real tokenizer counts (~4 characters per token)."""
+
+    def test_english_prose_is_about_four_chars_per_token(self):
+        text = "The quick brown fox jumps over the lazy dog. " * 100  # 4,500 chars
+        for model in ["gpt-4", "claude-3-opus", "default"]:
+            tokens = TokenCounter.estimate_tokens(text, model=model)
+            assert 900 <= tokens <= 1500, (model, tokens)
+
+
+class TestCli:
+    def run(self, capsys, monkeypatch, *argv):
+        from token_counter.core import main
+
+        monkeypatch.setattr("sys.argv", ["token-counter", *argv])
+        main()
+        return capsys.readouterr().out
+
+    def test_default_model_explains_missing_price(self, capsys, monkeypatch):
+        out = self.run(capsys, monkeypatch, "Hello world")
+        assert "Input tokens (estimated):" in out
+        assert "Pass --model to see a cost" in out
+
+    def test_unknown_model_exits_with_error(self, capsys, monkeypatch):
+        with pytest.raises(SystemExit) as exc:
+            self.run(capsys, monkeypatch, "Hello", "-m", "not-a-model")
+        assert exc.value.code == 2
+
+    def test_explicit_token_counts_are_priced_exactly(self, capsys, monkeypatch):
+        out = self.run(capsys, monkeypatch, "x", "-i", "1000", "-o", "500", "-m", "gpt-4-turbo")
+        assert '"input_tokens": 1000' in out
+        assert '"total_cost": 0.025' in out

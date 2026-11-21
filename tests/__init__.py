@@ -1,1 +1,1 @@
-""" Tests for token-counter """
+"""Tests for token-counter"""

@@ -1,56 +1,51 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "token-counter"
-version = "0.1.0"
-description = "Count tokens and calculate API costs for AI models - know costs BEFORE sending requests"
+version = "0.2.0"
+description = "Estimate LLM token counts and API costs before you send a request. Zero dependencies."
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
-authors = [{name = "Viprasol", email = "hello@viprasol.com"}]
-keywords = ["ai", "llm", "tokens", "cost-calculator", "claude", "openai", "gpt"]
+license = { text = "MIT" }
+authors = [{ name = "Viprasol Tech Private Limited", email = "support@viprasol.com" }]
+keywords = ["llm", "tokens", "cost-estimation", "claude", "openai", "gemini"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries",
-    "Topic :: Utilities",
 ]
-
 dependencies = []
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "black>=23.0",
-    "flake8>=6.0",
-    "mypy>=1.0",
-    "ruff>=0.1.0",
-]
+dev = ["ruff>=0.17.4,<0.18", "pytest>=8.0"]
+
+[project.urls]
+Homepage = "https://github.com/Viprasol-Tech/token-counter"
+Repository = "https://github.com/Viprasol-Tech/token-counter"
+Issues = "https://github.com/Viprasol-Tech/token-counter/issues"
+Website = "https://viprasol.com"
 
 [project.scripts]
 token-counter = "token_counter.core:main"
 
-[project.urls]
-Homepage = "https://viprasol.com"
-Repository = "https://github.com/viprasol/token-counter"
-Documentation = "https://docs.viprasol.com/token-counter"
-Issues = "https://github.com/viprasol/token-counter/issues"
-
-[tool.setuptools]
+[tool.hatch.build.targets.wheel]
 packages = ["token_counter"]
-
-[tool.black]
-line-length = 100
-target-version = ["py310", "py311", "py312"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]

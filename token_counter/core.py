@@ -5,27 +5,26 @@ Estimate token usage for Claude, OpenAI, Gemini, and other models.
 Know costs BEFORE sending requests to APIs.
 """
 
-import re
-from typing import Dict, Optional, Tuple
-
 
 class TokenCounter:
     """Count tokens for different AI models."""
 
-    # Approximate token ratios (tokens per 1000 characters)
-    # These are conservative estimates based on model documentation
+    # Approximate tokens per 1,000 characters of English text. Most tokenizers
+    # average about 4 characters per token (~250 per 1,000); Claude's runs
+    # slightly denser. Treat results as +/-25% estimates, and use the
+    # provider's token-counting endpoint when you need an exact number.
     TOKEN_RATIOS = {
-        "claude-3-opus": 6.0,  # More accurate on complex text
-        "claude-3-sonnet": 5.5,
-        "claude-3-haiku": 5.0,
-        "gpt-4": 4.0,
-        "gpt-4-turbo": 4.0,
-        "gpt-3.5-turbo": 4.0,
-        "gemini-pro": 5.0,
-        "gemini-pro-vision": 5.0,
-        "llama-2": 4.5,
-        "mistral": 4.5,
-        "default": 4.5,  # Safe default estimate
+        "claude-3-opus": 285.0,
+        "claude-3-sonnet": 285.0,
+        "claude-3-haiku": 285.0,
+        "gpt-4": 250.0,
+        "gpt-4-turbo": 250.0,
+        "gpt-3.5-turbo": 250.0,
+        "gemini-pro": 250.0,
+        "gemini-pro-vision": 250.0,
+        "llama-2": 270.0,
+        "mistral": 270.0,
+        "default": 270.0,
     }
 
     @staticmethod
@@ -78,8 +77,9 @@ class TokenCounter:
         char_count = cls.count_characters(text)
         ratio = cls.TOKEN_RATIOS.get(model.lower(), cls.TOKEN_RATIOS["default"])
 
-        # Estimate: ratio tokens per 1000 characters
-        estimated = int((char_count / 1000) * ratio) + 1
+        if char_count == 0:
+            return 1
+        estimated = round(char_count / 1000 * ratio)
 
         if include_overhead:
             estimated = int(estimated * 1.1)  # Add 10% buffer
@@ -91,7 +91,7 @@ class TokenCounter:
         cls,
         texts: list,
         model: str = "default",
-    ) -> Dict[str, int]:
+    ) -> dict[str, int]:
         """
         Estimate tokens for multiple texts.
 
@@ -136,7 +136,9 @@ class TokenCounter:
 class CostCalculator:
     """Calculate API costs based on token usage."""
 
-    # Pricing per 1M tokens (input, output)
+    # List prices in USD per 1M tokens (input, output) for these model versions.
+    # Prices change: add or update entries for the models you use, e.g.
+    # CostCalculator.PRICING["my-model"] = (1.0, 4.0)
     PRICING = {
         "claude-3-opus": (15.0, 75.0),
         "claude-3-sonnet": (3.0, 15.0),
@@ -153,7 +155,7 @@ class CostCalculator:
         input_tokens: int,
         output_tokens: int,
         model: str = "gpt-3.5-turbo",
-    ) -> Tuple[float, Dict]:
+    ) -> tuple[float, dict]:
         """
         Calculate API cost for token usage.
 
@@ -198,7 +200,7 @@ class CostCalculator:
         prompt: str,
         expected_output_tokens: int = 500,
         model: str = "gpt-3.5-turbo",
-    ) -> Dict:
+    ) -> dict:
         """
         Estimate cost for a complete request.
 
@@ -301,35 +303,24 @@ Examples:
 
     args = parser.parse_args()
 
-    try:
-        # Token counting
-        if args.input_tokens is None:
-            input_tokens = TokenCounter.estimate_tokens(args.text, model=args.model)
-        else:
-            input_tokens = args.input_tokens
+    if args.input_tokens is None:
+        input_tokens = TokenCounter.estimate_tokens(args.text, model=args.model)
+    else:
+        input_tokens = args.input_tokens
+    output_tokens = args.output_tokens or args.cost or 500
 
-        output_tokens = args.cost or args.output_tokens or 500
-
-        print(f"Input tokens: {input_tokens}")
-        print(f"Output tokens (estimated): {output_tokens}")
-        print()
-
-        # Cost calculation
-        cost_details = CostCalculator.estimate_request_cost(
-            args.text if not args.input_tokens else "",
-            expected_output_tokens=output_tokens,
-            model=args.model,
-        )
-
-        if not args.input_tokens:
-            cost_details["input_tokens"] = input_tokens
-
-        print("Cost breakdown:")
-        print(json.dumps(cost_details, indent=2))
-
-    except Exception as e:
-        print(f"Error: {e}")
-        exit(1)
+    print(f"Input tokens (estimated): {input_tokens}")
+    known = ", ".join(sorted(CostCalculator.PRICING))
+    if args.model == "default":
+        print(f"Pass --model to see a cost. Priced models: {known}")
+        return
+    if args.model not in CostCalculator.PRICING:
+        parser.error(f"no price for model '{args.model}'. Priced models: {known}")
+    print(f"Output tokens: {output_tokens}")
+    print()
+    _, details = CostCalculator.calculate_cost(input_tokens, output_tokens, model=args.model)
+    print("Cost breakdown:")
+    print(json.dumps(details, indent=2))
 
 
 if __name__ == "__main__":
